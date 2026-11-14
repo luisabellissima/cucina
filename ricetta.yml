@@ -1,0 +1,215 @@
+# Ogni mattina cerca la ricetta del giorno e aggiorna ricetta.json.
+# Si può avviare anche a mano: scheda Actions -> "Ricetta del giorno" -> Run workflow.
+name: Ricetta del giorno
+
+on:
+  schedule:
+    - cron: '17 4 * * *'   # ogni giorno alle 04:17 UTC (le 5 o le 6 del mattino in Italia)
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  aggiorna:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Cerca la ricetta
+        run: |
+          cat > /tmp/ricetta.py <<'PYEOF'
+          # Cerca la ricetta del giorno e la salva in ricetta.json (titolo, foto, link).
+          # Legge solo titolo, immagine e indirizzo: il testo della ricetta resta sul sito originale.
+          import datetime, html, json, re, sys, urllib.parse, urllib.request, urllib.robotparser
+          import xml.etree.ElementTree as ET
+
+          UA = "Mozilla/5.0 (compatible; pannello-cucina/1.0; uso domestico personale)"
+          FILE = "ricetta.json"
+
+          # I siti vengono provati nell'ordine: il primo che risponde vince.
+          SITES = [
+              {"name": "Fatto in casa da Benedetta",
+               "feeds": ["https://www.fattoincasadabenedetta.it/feed/"],
+               "home": "https://www.fattoincasadabenedetta.it/",
+               "link": r"https://www\.fattoincasadabenedetta\.it/ricetta/[a-z0-9\-]+/?"},
+              {"name": "GialloZafferano",
+               "feeds": ["https://www.giallozafferano.it/feed/"],
+               "home": "https://www.giallozafferano.it/",
+               "link": r"https://ricette\.giallozafferano\.it/[A-Za-z0-9\-]+\.html"},
+          ]
+
+          _robots = {}
+
+
+          def get(url):
+              req = urllib.request.Request(url, headers={"User-Agent": UA, "Accept-Language": "it-IT,it;q=0.9"})
+              with urllib.request.urlopen(req, timeout=20) as r:
+                  return r.read(3000000)
+
+
+          def allowed(url):
+              """Rispetta il file robots.txt del sito."""
+              p = urllib.parse.urlsplit(url)
+              base = p.scheme + "://" + p.netloc
+              if base not in _robots:
+                  rp = urllib.robotparser.RobotFileParser()
+                  try:
+                      rp.parse(get(base + "/robots.txt").decode("utf-8", "replace").splitlines())
+                  except Exception as e:
+                      print("  robots.txt non leggibile per", base, "-", e)
+                      rp = None
+                  _robots[base] = rp
+              rp = _robots[base]
+              return True if rp is None else rp.can_fetch(UA, url)
+
+
+          def fetch(url):
+              if not allowed(url):
+                  print("  vietato da robots.txt:", url)
+                  return None
+              try:
+                  data = get(url)
+                  print("  ok:", url)
+                  return data
+              except Exception as e:
+                  print("  errore:", url, "-", e)
+                  return None
+
+
+          def local(tag):
+              return tag.split("}")[-1].lower()
+
+
+          def is_image(url):
+              return bool(re.search(r"\.(jpe?g|png|webp)(\?|$)", url or "", re.I))
+
+
+          def parse_feed(data):
+              """Estrae titolo, link e immagine dagli elementi di un feed RSS o Atom."""
+              out = []
+              try:
+                  root = ET.fromstring(data)
+              except ET.ParseError as e:
+                  print("  feed non valido:", e)
+                  return out
+              for item in root.iter():
+                  if local(item.tag) not in ("item", "entry"):
+                      continue
+                  title = link = image = ""
+                  texts = []
+                  for c in item.iter():
+                      if c is item:
+                          continue
+                      name = local(c.tag)
+                      if name == "title" and not title:
+                          title = (c.text or "").strip()
+                      elif name == "link" and not link:
+                          link = (c.text or "").strip() or c.attrib.get("href", "")
+                      elif name in ("content", "thumbnail", "enclosure") and not image:
+                          u = c.attrib.get("url", "")
+                          kind = c.attrib.get("type", "") + c.attrib.get("medium", "")
+                          if u and ("image" in kind or is_image(u)):
+                              image = u
+                      if name in ("description", "encoded", "content", "summary") and c.text:
+                          texts.append(c.text)
+                  if not image:
+                      m = re.search(r'<img[^>]+src=["\']([^"\']+)["\']', " ".join(texts), re.I)
+                      if m:
+                          image = html.unescape(m.group(1))
+                  if link:
+                      out.append({"title": html.unescape(title), "url": link, "image": image})
+              return out
+
+
+          def meta(text, prop):
+              for m in re.finditer(r"<meta\b[^>]*>", text, re.I):
+                  tag = m.group(0)
+                  if re.search(r'(?:property|name)\s*=\s*["\']%s["\']' % re.escape(prop), tag, re.I):
+                      c = re.search(r'content\s*=\s*"([^"]*)"|content\s*=\s*\'([^\']*)\'', tag, re.I)
+                      if c:
+                          return html.unescape(c.group(1) or c.group(2) or "").strip()
+              return ""
+
+
+          def clean_title(t):
+              t = re.sub(r"\s*[|\-–—]\s*(La\s+ricetta\s+di\s+)?(Fatto in casa da Benedetta|Giallo\s?Zafferano).*$", "", t, flags=re.I)
+              t = re.sub(r"^Ricetta\s+", "", t, flags=re.I)
+              return re.sub(r"\s+", " ", t).strip()
+
+
+          def candidates(site):
+              rx = re.compile(site["link"])
+              for feed in site["feeds"]:
+                  data = fetch(feed)
+                  if not data:
+                      continue
+                  items = parse_feed(data)
+                  good = [i for i in items if rx.fullmatch(i["url"])] or items
+                  if good:
+                      print("  dal feed:", len(good), "ricette")
+                      return good
+              data = fetch(site["home"])
+              if not data:
+                  return []
+              seen, out = set(), []
+              for u in rx.findall(data.decode("utf-8", "replace")):
+                  if u not in seen:
+                      seen.add(u)
+                      out.append({"title": "", "url": u, "image": ""})
+              print("  dalla pagina principale:", len(out), "ricette")
+              return out
+
+
+          def complete(c):
+              """Se mancano titolo o foto, li legge dai dati di anteprima della pagina."""
+              if c["title"] and c["image"]:
+                  return c
+              data = fetch(c["url"])
+              if data:
+                  text = data.decode("utf-8", "replace")
+                  c["title"] = c["title"] or meta(text, "og:title")
+                  c["image"] = c["image"] or meta(text, "og:image")
+              return c
+
+
+          def main():
+              try:
+                  with open(FILE, encoding="utf-8") as f:
+                      history = json.load(f).get("history", [])
+              except Exception:
+                  history = []
+
+              for site in SITES:
+                  print(site["name"])
+                  cands = candidates(site)
+                  # Prima le ricette mai mostrate, poi quelle mostrate più tempo fa.
+                  cands.sort(key=lambda c: history.index(c["url"]) - len(history) if c["url"] in history else -len(history) - 1)
+                  for c in cands[:3]:
+                      c = complete(c)
+                      title = clean_title(c["title"])
+                      if not title or not c["url"].startswith("https://"):
+                          continue
+                      image = c["image"] if c["image"].startswith("https://") else ""
+                      history = [u for u in history if u != c["url"]] + [c["url"]]
+                      out = {"title": title, "url": c["url"], "image": image, "source": site["name"],
+                             "date": datetime.date.today().isoformat(), "history": history[-60:]}
+                      with open(FILE, "w", encoding="utf-8") as f:
+                          json.dump(out, f, ensure_ascii=False, indent=1)
+                      print("Ricetta del giorno:", title, "-", c["url"])
+                      return 0
+              print("Nessuna ricetta trovata: ricetta.json resta invariato.")
+              return 1
+
+
+          if __name__ == "__main__":
+              sys.exit(main())
+          PYEOF
+          python3 /tmp/ricetta.py
+
+      - name: Salva nel repository
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add ricetta.json
+          git diff --cached --quiet || (git commit -m "Ricetta del giorno" && git push)
