@@ -75,22 +75,24 @@
   body.has-recipe #alm-season { display: none; }
 
   /* ----- colonna sinistra ----- */
-  #clock { font-size: 19vh; font-weight: 300; line-height: 1; letter-spacing: -0.02em; }
+  #clock { font-size: 17vh; font-weight: 300; line-height: 1; letter-spacing: -0.02em; }
   #date { font-size: 3.6vh; color: #a9b4bf; margin-top: 1vh; text-transform: capitalize; }
 
-  #weather { margin-top: 4vh; flex: 1; min-height: 0; }
+  #weather { margin-top: 3vh; flex: 1; min-height: 0; }
   #now { display: flex; align-items: center; gap: 1.5vw; }
   #now-icon { font-size: 11vh; line-height: 1; }
   #now-temp { font-size: 11vh; font-weight: 300; line-height: 1; }
   #now-text { font-size: 2.8vh; color: #a9b4bf; margin-top: 1.2vh; }
   #city { font-size: 2.4vh; color: #6f7b87; margin-top: 0.4vh; }
-  #days { display: flex; gap: 0.8vw; margin-top: 3vh; }
-  .day { flex: 1; background: #1a2027; border-radius: 14px; padding: 1.6vh 0.4vw; text-align: center; }
-  .day .n { font-size: 2.2vh; color: #a9b4bf; text-transform: capitalize; }
-  .day .i { font-size: 4.6vh; margin: 0.6vh 0; line-height: 1.1; }
+  .bar { display: flex; background: #1a2027; border-radius: 14px; margin-top: 2vh; overflow: hidden; }
+  .bar .day { flex: 1; min-width: 0; padding: 1.3vh 0.2vw; text-align: center; border-left: 1px solid #262e37; }
+  .bar .day:first-child { border-left: 0; }
+  .day .n { font-size: 2.1vh; color: #a9b4bf; text-transform: capitalize; }
+  .day .i { font-size: 4.2vh; margin: 0.4vh 0; line-height: 1.1; }
   .day .t { font-size: 2.4vh; }
   .day .t span { color: #6f7b87; }
-  .day .p { font-size: 1.9vh; color: #6fb3e8; margin-top: 0.3vh; min-height: 2.3vh; }
+  .day .p { font-size: 1.8vh; color: #6fb3e8; margin-top: 0.2vh; min-height: 2.2vh; }
+  #hours .i { font-size: 3.6vh; }
 
   #buttons { display: flex; gap: 1vw; margin-top: 2vh; }
   .btn {
@@ -157,7 +159,8 @@
       </div>
       <div id="now-text">Meteo non configurato</div>
       <div id="city"></div>
-      <div id="days"></div>
+      <div id="hours" class="bar"></div>
+      <div id="days" class="bar"></div>
     </div>
 
     <div id="buttons">
@@ -684,10 +687,25 @@
   };
   function wmo(code) { return WMO[code] || ['🌡️', '']; }
 
+  var HOUR_SLOTS = 6;   // quante caselle da 3 ore mostrare
+
+  // Una casella delle barre meteo: etichetta, icona, temperatura (ed eventuale minima), pioggia.
+  function cell(label, icon, temp, tempMin, rain) {
+    var c = el('div', 'day');
+    c.appendChild(el('div', 'n', label));
+    c.appendChild(el('div', 'i', icon));
+    var t = el('div', 't', temp);
+    if (tempMin !== null) { t.appendChild(el('span', '', tempMin)); }
+    c.appendChild(t);
+    c.appendChild(el('div', 'p', rain !== null && rain !== undefined && rain >= 20 ? '💧 ' + rain + '%' : ''));
+    return c;
+  }
+
   function loadWeather() {
     if (cfg.lat === null || cfg.lon === null) { return; }
     var url = 'https://api.open-meteo.com/v1/forecast?latitude=' + cfg.lat + '&longitude=' + cfg.lon +
       '&current=temperature_2m,apparent_temperature,weather_code' +
+      '&hourly=temperature_2m,weather_code,precipitation_probability,is_day' +
       '&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max,sunrise,sunset' +
       '&timezone=auto&forecast_days=5';
 
@@ -698,23 +716,37 @@
       var c = w.current, now = wmo(c.weather_code);
       $('now-icon').textContent = now[0];
       $('now-temp').textContent = Math.round(c.temperature_2m) + '°';
-      $('now-text').textContent = now[1] + ' · percepiti ' + Math.round(c.apparent_temperature) + '°';
+      var d = w.daily;
+      $('now-text').textContent = now[1] + ' · percepiti ' + Math.round(c.apparent_temperature) + '° · oggi ' +
+        Math.round(d.temperature_2m_max[0]) + '° / ' + Math.round(d.temperature_2m_min[0]) + '°';
       $('city').textContent = cfg.city || '';
 
+      // Barra delle prossime ore, a passi di 3 ore.
+      var hb = $('hours'), hr = w.hourly;
+      hb.textContent = '';
+      if (hr && hr.time) {
+        var t0 = new Date();
+        var nowKey = t0.getFullYear() + '-' + pad(t0.getMonth() + 1) + '-' + pad(t0.getDate()) + 'T' + pad(t0.getHours()) + ':00';
+        var shown = 0;
+        for (var j = 0; j < hr.time.length && shown < HOUR_SLOTS; j++) {
+          var hh = parseInt(hr.time[j].slice(11, 13), 10);
+          if (hr.time[j] <= nowKey || hh % 3 !== 0) { continue; }
+          var night = hr.is_day && hr.is_day[j] === 0;
+          var code = hr.weather_code[j];
+          var icon = night && code <= 1 ? '🌙' : wmo(code)[0];
+          hb.appendChild(cell(pad(hh) + ':00', icon, Math.round(hr.temperature_2m[j]) + '°', null,
+            hr.precipitation_probability ? hr.precipitation_probability[j] : null));
+          shown++;
+        }
+      }
+
+      // Barra dei prossimi 4 giorni (oggi escluso).
       var box = $('days');
       box.textContent = '';
-      var d = w.daily;
-      for (var i = 0; i < d.time.length; i++) {
-        var day = el('div', 'day');
-        var name = i === 0 ? 'oggi' : fmtDay.format(new Date(d.time[i] + 'T12:00:00'));
-        day.appendChild(el('div', 'n', name));
-        day.appendChild(el('div', 'i', wmo(d.weather_code[i])[0]));
-        var t = el('div', 't', Math.round(d.temperature_2m_max[i]) + '° ');
-        t.appendChild(el('span', '', Math.round(d.temperature_2m_min[i]) + '°'));
-        day.appendChild(t);
-        var rain = d.precipitation_probability_max ? d.precipitation_probability_max[i] : null;
-        day.appendChild(el('div', 'p', rain !== null && rain >= 20 ? '💧 ' + rain + '%' : ''));
-        box.appendChild(day);
+      for (var i = 1; i < d.time.length; i++) {
+        box.appendChild(cell(fmtDay.format(new Date(d.time[i] + 'T12:00:00')), wmo(d.weather_code[i])[0],
+          Math.round(d.temperature_2m_max[i]) + '° ', Math.round(d.temperature_2m_min[i]) + '°',
+          d.precipitation_probability_max ? d.precipitation_probability_max[i] : null));
       }
 
       if (d.sunrise && d.sunset && d.sunrise[0] && d.sunset[0]) {
