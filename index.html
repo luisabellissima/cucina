@@ -114,9 +114,17 @@
   #b-radio { background: linear-gradient(160deg, #22a8ad, #0e6471); }
   #b-youtube { background: linear-gradient(160deg, #ea5055, #a11a22); }
   #b-view { background: linear-gradient(160deg, #4f95dc, #23568f); }
-  #b-settings { flex: 0 0 13.5vh; background: #1a2027; color: #a9b4bf; box-shadow: inset 0 1px 0 rgba(255,255,255,0.06); }
-  #b-settings svg { stroke: #a9b4bf; width: 5vh; height: 5vh; }
-  #b-settings svg .f { fill: #1a2027; stroke: #a9b4bf; }
+  /* Impostazioni: pulsante piccolo e discreto accanto all'orologio */
+  #clock-row { display: flex; align-items: flex-start; justify-content: space-between; }
+  #b-settings {
+    flex: 0 0 auto; width: 4.6vh; height: 4.6vh; margin-top: 1vh; padding: 0; border: 0; border-radius: 50%;
+    background: transparent; opacity: 0.4; display: flex; align-items: center; justify-content: center;
+  }
+  #b-settings:active { opacity: 1; background: #1a2027; }
+  #b-settings svg {
+    width: 3vh; height: 3vh; fill: none; stroke: #a9b4bf; stroke-width: 1.7; stroke-linecap: round;
+  }
+  #b-settings svg .f { fill: #101418; stroke: #a9b4bf; }
   #b-view .ic-alm { display: none; }
   body.view-agenda #b-view .ic-alm { display: block; }
   body.view-agenda #b-view .ic-cal { display: none; }
@@ -164,7 +172,15 @@
 
 <div id="app">
   <div id="left">
-    <div id="clock">--:--</div>
+    <div id="clock-row">
+      <div id="clock">--:--</div>
+      <button id="b-settings" aria-label="Impostazioni">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M4 7h16M4 12h16M4 17h16"/>
+          <circle class="f" cx="9" cy="7" r="2.1"/><circle class="f" cx="15.5" cy="12" r="2.1"/><circle class="f" cx="8" cy="17" r="2.1"/>
+        </svg>
+      </button>
+    </div>
     <div id="date"></div>
 
     <div id="weather">
@@ -204,12 +220,6 @@
         </svg>
         <span id="b-view-label">Agenda</span>
       </button>
-      <button class="btn" id="b-settings" aria-label="Impostazioni">
-        <svg viewBox="0 0 24 24" aria-hidden="true">
-          <path d="M4 7h16M4 12h16M4 17h16"/>
-          <circle class="f" cx="9" cy="7" r="2.1"/><circle class="f" cx="15.5" cy="12" r="2.1"/><circle class="f" cx="8" cy="17" r="2.1"/>
-        </svg>
-      </button>
     </div>
   </div>
 
@@ -229,7 +239,7 @@
       <hr class="rule">
 
       <div>
-        <div class="cap">Il proverbio</div>
+        <div class="cap" id="alm-prov-cap">Il proverbio</div>
         <div id="alm-prov"></div>
       </div>
 
@@ -418,41 +428,41 @@
   // Proverbi della tradizione popolare, mese per mese.
   var PROVERBS = [
     ['Gennaio secco, lo villan ricco.', 'Sotto la neve pane, sotto la pioggia fame.',
-     'L\'Epifania tutte le feste porta via.', 'Sant\'Antonio la gran freddura, San Lorenzo la gran calura: l\'una e l\'altra poco dura.',
+     [6, 'L\'Epifania tutte le feste porta via.'], [17, 'Sant\'Antonio la gran freddura, San Lorenzo la gran calura: l\'una e l\'altra poco dura.'],
      'Chi vuole un buon agliaio lo pianti di gennaio.'],
     ['Febbraio, febbraietto, corto e maledetto.',
-     'Per la Candelora dell\'inverno siamo fuori; ma se piove o tira vento, dell\'inverno siamo dentro.',
+     [2, 'Per la Candelora dell\'inverno siamo fuori; ma se piove o tira vento, dell\'inverno siamo dentro.'],
      'Febbraio nevoso, estate gioiosa.', 'A Carnevale ogni scherzo vale.',
      'Se di febbraio corrono i viottoli, empie di vino e olio tutti i ciottoli.'],
     ['Marzo pazzerello, guarda il sole e prendi l\'ombrello.', 'Neve marzolina dura dalla sera alla mattina.',
-     'Marzo asciutto e aprile bagnato, beato il villano che ha seminato.', 'San Benedetto, la rondine sotto il tetto.',
+     'Marzo asciutto e aprile bagnato, beato il villano che ha seminato.', [21, 'San Benedetto, la rondine sotto il tetto.'],
      'Di marzo, chi non ha scarpe vada scalzo.'],
     ['Aprile, dolce dormire.', 'Aprile, ogni goccia un barile.', 'Aprile non ti scoprire.',
-     'Aprile piovoso, maggio ventoso, anno fruttuoso.', 'Terzo aprilante, quaranta dì durante.'],
+     'Aprile piovoso, maggio ventoso, anno fruttuoso.', [3, 'Terzo aprilante, quaranta dì durante.']],
     ['Maggio asciutto, grano dappertutto.', 'Maggio ortolano, molta paglia e poco grano.',
      'Aprile non ti scoprire, maggio va\' adagio, giugno allarga il pugno.',
      'Maggio fresco e casa calda, la massaia sta lieta e balda.', 'Di maggio, ciliegie per assaggio.'],
-    ['Giugno, la falce in pugno.', 'San Giovanni non vuole inganni.',
-     'La notte di San Giovanni entra il mosto nel chicco.', 'Acqua di giugno rovina il mugnaio.',
+    ['Giugno, la falce in pugno.', [24, 'San Giovanni non vuole inganni.'],
+     [23, 'La notte di San Giovanni entra il mosto nel chicco.'], 'Acqua di giugno rovina il mugnaio.',
      'Giugno ciliegiaio, luglio fienaio.'],
     ['Luglio dal gran caldo, bevi bene e batti saldo.', 'Se piove tra luglio e agosto, piove miele, olio e mosto.',
-     'Per Santa Maddalena la nocciola è piena.', 'Chi vuole un buon rapuglio lo semini di luglio.',
+     [22, 'Per Santa Maddalena la nocciola è piena.'], 'Chi vuole un buon rapuglio lo semini di luglio.',
      'Luglio soleggiato, vino prelibato.'],
     ['Agosto ci matura il grano e il mosto.', 'La prima acqua d\'agosto rinfresca il bosco.',
-     'Chi dorme d\'agosto dorme a suo costo.', 'San Lorenzo, la gran calura.',
-     'Per l\'Assunta, l\'oliva è unta.'],
+     'Chi dorme d\'agosto dorme a suo costo.', [10, 'San Lorenzo, la gran calura.'],
+     [15, 'Per l\'Assunta, l\'oliva è unta.']],
     ['Settembre, l\'uva è fatta e il fico pende.', 'Aria settembrina, fresco la sera e fresco la mattina.',
-     'Di settembre la notte col dì contende.', 'Per San Michele il calore va in cielo.',
+     'Di settembre la notte col dì contende.', [29, 'Per San Michele il calore va in cielo.'],
      'Settembre caldo e asciutto, maturare fa ogni frutto.'],
     ['Ottobre piovoso, campo prosperoso.', 'Chi semina in ottobre miete in giugno.',
-     'Per San Simone il ventaglio si ripone.', 'Ottobre, il vino è nelle doghe.',
-     'Per San Luca, chi non ha seminato si spilluca.'],
-    ['Per San Martino ogni mosto diventa vino.', 'L\'estate di San Martino dura tre giorni e un pochino.',
-     'Per i Santi, manicotto e guanti.', 'Se di novembre tuona, l\'annata sarà buona.',
-     'Per Santa Caterina, la neve alla collina.'],
-    ['Santa Lucia, il giorno più corto che ci sia.', 'Natale con i tuoi, Pasqua con chi vuoi.',
-     'Dicembre nevoso, anno fruttuoso.', 'Per Santa Bibiana, quaranta dì e una settimana.',
-     'Natale al sole, Pasqua al tizzone.']
+     [28, 'Per San Simone il ventaglio si ripone.'], 'Ottobre, il vino è nelle doghe.',
+     [18, 'Per San Luca, chi non ha seminato si spilluca.']],
+    [[11, 'Per San Martino ogni mosto diventa vino.'], [12, 'L\'estate di San Martino dura tre giorni e un pochino.'],
+     [1, 'Per i Santi, manicotto e guanti.'], 'Se di novembre tuona, l\'annata sarà buona.',
+     [25, 'Per Santa Caterina, la neve alla collina.']],
+    [[13, 'Santa Lucia, il giorno più corto che ci sia.'], [25, 'Natale con i tuoi, Pasqua con chi vuoi.'],
+     'Dicembre nevoso, anno fruttuoso.', [2, 'Per Santa Bibiana, quaranta dì e una settimana.'],
+     [24, 'Natale al sole, Pasqua al tizzone.']]
   ];
 
   // Frutta e verdura di stagione in Italia, mese per mese.
@@ -608,6 +618,23 @@
     var d = 'M0,-50 A50,50 0 0,1 0,50 A' + rx + ',50 0 0,' + (q < 0.25 ? 0 : 1) + ' 0,-50 Z';
     return { d: d, flip: !waxing };
   }
+  // Proverbio italiano previsto per il giorno, oppure null.
+  // Quelli con data cadono nel loro giorno; gli altri riempiono i primi giorni liberi del mese.
+  function seasonalProverb(d) {
+    var list = PROVERBS[d.getMonth()], byDay = {}, free = [], i;
+    for (i = 0; i < list.length; i++) {
+      if (typeof list[i] === 'string') { free.push(list[i]); } else { byDay[list[i][0]] = list[i][1]; }
+    }
+    for (i = 1; free.length && i <= 31; i++) { if (!byDay[i]) { byDay[i] = free.shift(); } }
+    return byDay[d.getDate()] || null;
+  }
+
+  // Detto napoletano del giorno: scelta fissa per data, che salta in punti diversi della raccolta.
+  function neapolitanProverb(d, items) {
+    if (!items || !items.length) { return null; }
+    var n = Math.floor(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()) / DAY);
+    return items[(n * 7919) % items.length];
+  }
   //</ALMANAC>
 
   // =====================================================================
@@ -618,6 +645,7 @@
   var fmtShort = new Intl.DateTimeFormat('it-IT', { weekday: 'short', day: 'numeric', month: 'short' });
   var sun = null;            // { rise: Date, set: Date } dal servizio meteo
   var almDay = '';
+  var neapolitan = null;     // raccolta di detti napoletani (napoletano.json)
 
   function hm(d) { return pad(d.getHours()) + ':' + pad(d.getMinutes()); }
 
@@ -651,23 +679,47 @@
       $('sun-info').textContent = cfg.lat === null ? 'Imposta la città nelle impostazioni' : 'In attesa dei dati…';
     }
 
-    var list = PROVERBS[d.getMonth()];
-    $('alm-prov').textContent = '«' + list[doy % list.length] + '»';
+    // Prima i proverbi italiani di stagione; negli altri giorni un detto napoletano.
+    var prov = seasonalProverb(d), cap = 'Il proverbio';
+    if (!prov) {
+      prov = neapolitanProverb(d, neapolitan);
+      if (prov) {
+        cap = 'Detto napoletano · da Wikiquote';
+      } else {               // raccolta non disponibile: si ripetono i proverbi del mese
+        var list = PROVERBS[d.getMonth()], one = list[doy % list.length];
+        prov = typeof one === 'string' ? one : one[1];
+      }
+    }
+    $('alm-prov-cap').textContent = cap;
+    $('alm-prov').textContent = '«' + prov.replace(/^[«"“]+|[»"”]+$/g, '') + '»';
     $('alm-veg').textContent = VEG[d.getMonth()];
     $('alm-fruit').textContent = FRUIT[d.getMonth()];
   }
 
   // ---------- ricetta del giorno ----------
   // Il file ricetta.json viene aggiornato ogni mattina da GitHub (vedi ricetta.yml).
-  function recipeUrls() {
+  // I file preparati da GitHub si leggono prima dal repository (copia più fresca), poi dal sito.
+  function dataUrls(name) {
     var urls = [];
     var m = /^([a-z0-9-]+)\.github\.io$/i.exec(location.hostname);
     var repo = location.pathname.split('/')[1];
-    if (m && repo) {   // copia più fresca, direttamente dal repository
-      urls.push('https://raw.githubusercontent.com/' + m[1] + '/' + repo + '/HEAD/ricetta.json');
-    }
-    urls.push('ricetta.json');
+    if (m && repo) { urls.push('https://raw.githubusercontent.com/' + m[1] + '/' + repo + '/HEAD/' + name); }
+    urls.push(name);
     return urls;
+  }
+
+  // Scarica un file JSON provando gli indirizzi in ordine; "use" restituisce true se il contenuto va bene.
+  function loadJson(name, use) {
+    var urls = dataUrls(name);
+    (function next(i) {
+      if (i >= urls.length) { return; }
+      fetch(urls[i] + '?t=' + Date.now()).then(function (r) {
+        if (!r.ok) { throw new Error('HTTP ' + r.status); }
+        return r.json();
+      }).then(function (j) {
+        if (!use(j)) { next(i + 1); }
+      }).catch(function () { next(i + 1); });
+    })(0);
   }
 
   function showRecipe(r) {
@@ -686,17 +738,16 @@
     return true;
   }
 
-  function loadRecipe() {
-    var urls = recipeUrls();
-    (function next(i) {
-      if (i >= urls.length) { return; }   // nessuna ricetta: resta la frutta e verdura di stagione
-      fetch(urls[i] + '?t=' + Date.now()).then(function (r) {
-        if (!r.ok) { throw new Error('HTTP ' + r.status); }
-        return r.json();
-      }).then(function (r) {
-        if (!showRecipe(r)) { next(i + 1); }
-      }).catch(function () { next(i + 1); });
-    })(0);
+  // Se la ricetta non c'è, restano frutta e verdura di stagione.
+  function loadRecipe() { loadJson('ricetta.json', showRecipe); }
+
+  function loadNeapolitan() {
+    loadJson('napoletano.json', function (j) {
+      if (!j || !Array.isArray(j.items) || !j.items.length) { return false; }
+      neapolitan = j.items.filter(function (s) { return typeof s === 'string'; });
+      renderAlmanac();
+      return true;
+    });
   }
   $('rec-img').addEventListener('error', function () { this.style.display = 'none'; });
 
@@ -912,8 +963,10 @@
   applyView();
   loadWeather();
   loadRecipe();
+  loadNeapolitan();
   setInterval(tick, 5000);
   setInterval(loadRecipe, 3 * 60 * 60 * 1000);   // ricetta ogni 3 ore
+  setInterval(loadNeapolitan, 24 * 60 * 60 * 1000);
   setInterval(loadWeather, WEATHER_EVERY);
   setInterval(loadCalendar, CAL_EVERY);
   if (cfg.lat === null && !cfg.cal) { openSettings(); }
