@@ -44,17 +44,16 @@
   #alm-my { font-size: 3.4vh; text-transform: capitalize; color: #6b5d52; margin-top: 0.3vh; }
   #alm-saint { font-size: 3.3vh; margin-top: 1.4vh; font-style: italic; }
   #alm-fest { font-size: 2.6vh; color: #a3271c; font-weight: bold; margin-top: 0.6vh; }
-  #alm-count { font-size: 2.1vh; color: #8b7d70; margin-top: 0.8vh; font-family: Roboto, sans-serif; }
 
-  .rule { border: 0; border-top: 2px solid #2a2320; margin: 2vh 0 1.6vh; }
+  .rule { border: 0; border-top: 2px solid #2a2320; margin: 2vh 0 1.6vh; width: 100%; }
   .rule.thin { border-top: 1px solid #c9bda6; }
 
   #alm-tiles { display: flex; gap: 2vw; }
   .tile { flex: 1; display: flex; align-items: center; gap: 1.2vw; min-width: 0; }
-  .tile svg { flex: 0 0 auto; width: 11vh; height: 11vh; }
-  .tile .big { font-size: 3vh; font-weight: bold; }
-  .tile .sm { font-size: 2.2vh; color: #5c4f45; margin-top: 0.4vh; line-height: 1.35; font-family: Roboto, sans-serif; }
-  .tile .sun { font-size: 9vh; line-height: 1; flex: 0 0 auto; }
+  .tile svg { flex: 0 0 auto; width: 6.5vh; height: 6.5vh; }
+  .tile .big { font-size: 2.4vh; font-weight: bold; }
+  .tile .sm { font-size: 1.85vh; color: #5c4f45; margin-top: 0.2vh; line-height: 1.3; font-family: Roboto, sans-serif; }
+  .tile .sun { font-size: 5.6vh; line-height: 1; flex: 0 0 auto; }
 
   .cap {
     font-family: Roboto, sans-serif; font-size: 1.9vh; letter-spacing: 0.16em;
@@ -64,13 +63,13 @@
   #alm-season { display: flex; gap: 2vw; }
   #alm-season > div { flex: 1; min-width: 0; }
   #alm-season p { font-size: 2.35vh; line-height: 1.4; font-family: Roboto, sans-serif; color: #3d332c; }
-  #alm .grow { flex: 1; min-height: 0; }
+  #alm .grow { flex: 1; min-height: 0; display: flex; flex-direction: column; justify-content: center; }
 
   #alm-recipe { display: none; align-items: center; gap: 1.6vw; color: inherit; text-decoration: none; }
   #alm-recipe:active { opacity: 0.7; }
-  #rec-img { flex: 0 0 auto; width: 26vh; height: 17vh; object-fit: cover; border-radius: 12px; background: #e6dcc6; }
+  #rec-img { flex: 0 0 auto; width: 34vh; height: 23vh; object-fit: cover; border-radius: 12px; background: #e6dcc6; }
   #alm-recipe .txt { min-width: 0; flex: 1; }
-  #rec-title { font-size: 3.7vh; font-weight: bold; line-height: 1.2; max-height: 13.4vh; overflow: hidden; }
+  #rec-title { font-size: 4.2vh; font-weight: bold; line-height: 1.2; max-height: 15.2vh; overflow: hidden; }
   #rec-src { font-family: Roboto, sans-serif; font-size: 2.1vh; color: #6b5d52; margin-top: 0.8vh; }
   body.has-recipe #alm-recipe { display: flex; }
   body.has-recipe #alm-season { display: none; }
@@ -181,11 +180,36 @@
           <div id="alm-my"></div>
           <div id="alm-saint"></div>
           <div id="alm-fest"></div>
-          <div id="alm-count"></div>
         </div>
       </div>
 
       <hr class="rule">
+
+      <div>
+        <div class="cap">Il proverbio</div>
+        <div id="alm-prov"></div>
+      </div>
+
+      <hr class="rule thin">
+
+      <div class="grow">
+        <a id="alm-recipe" target="_blank" rel="noopener">
+          <img id="rec-img" alt="">
+          <div class="txt">
+            <div class="cap">La ricetta del giorno</div>
+            <div id="rec-title"></div>
+            <div id="rec-src"></div>
+          </div>
+        </a>
+
+        <!-- Mostrate solo se la ricetta del giorno non è disponibile -->
+        <div id="alm-season">
+          <div><div class="cap">Verdura di stagione</div><p id="alm-veg"></p></div>
+          <div><div class="cap">Frutta di stagione</div><p id="alm-fruit"></p></div>
+        </div>
+      </div>
+
+      <hr class="rule thin">
 
       <div id="alm-tiles">
         <div class="tile">
@@ -206,30 +230,6 @@
             <div class="sm" id="sun-info"></div>
           </div>
         </div>
-      </div>
-
-      <hr class="rule thin">
-
-      <div class="grow">
-        <div class="cap">Il proverbio</div>
-        <div id="alm-prov"></div>
-      </div>
-
-      <hr class="rule thin">
-
-      <a id="alm-recipe" target="_blank" rel="noopener">
-        <img id="rec-img" alt="">
-        <div class="txt">
-          <div class="cap">La ricetta del giorno</div>
-          <div id="rec-title"></div>
-          <div id="rec-src"></div>
-        </div>
-      </a>
-
-      <!-- Mostrate solo se la ricetta del giorno non è disponibile -->
-      <div id="alm-season">
-        <div><div class="cap">Verdura di stagione</div><p id="alm-veg"></p></div>
-        <div><div class="cap">Frutta di stagione</div><p id="alm-fruit"></p></div>
       </div>
     </div>
 
@@ -589,26 +589,20 @@
     $('alm-fest').textContent = feasts(d).join(' · ');
 
     var doy = dayOfYear(d);
-    var total = dayOfYear(new Date(d.getFullYear(), 11, 31));
-    $('alm-count').textContent = 'Giorno ' + doy + ' dell\'anno · ne mancano ' + (total - doy) +
-      ' · settimana ' + isoWeek(d);
 
     var m = moon(d), mp = moonPath(m.p);
     var lit = $('moon-lit');
     lit.setAttribute('d', mp.d);
     lit.setAttribute('transform', mp.flip ? 'scale(-1,1)' : '');
     $('moon-name').textContent = m.name;
-    var a = ['Luna piena: ' + fmtShort.format(m.fullNext), 'Luna nuova: ' + fmtShort.format(m.newNext)];
+    var a = ['piena ' + fmtShort.format(m.fullNext), 'nuova ' + fmtShort.format(m.newNext)];
     if (m.newNext < m.fullNext) { a.reverse(); }
-    var info = $('moon-info');
-    info.textContent = '';
-    info.appendChild(document.createTextNode('Illuminata al ' + m.lit + '%'));
-    a.forEach(function (t) { info.appendChild(document.createElement('br')); info.appendChild(document.createTextNode(t)); });
+    $('moon-info').textContent = 'Illuminata al ' + m.lit + '% · ' + a.join(' · ');
 
     if (sun) {
       var mins = Math.round((sun.set - sun.rise) / 60000);
       $('sun-main').textContent = hm(sun.rise) + ' – ' + hm(sun.set);
-      $('sun-info').textContent = 'Alba e tramonto · ' + Math.floor(mins / 60) + ' ore e ' + (mins % 60) + ' minuti di luce';
+      $('sun-info').textContent = 'Alba e tramonto · ' + Math.floor(mins / 60) + ' h ' + (mins % 60) + ' min di luce';
     } else {
       $('sun-main').textContent = 'Alba e tramonto';
       $('sun-info').textContent = cfg.lat === null ? 'Imposta la città con ⚙' : 'In attesa dei dati…';
