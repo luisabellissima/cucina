@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+<meta name="theme-color" content="#101418">
+<meta name="mobile-web-app-capable" content="yes">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon-192.png">
+<title>Cucina</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; }
+  body {
+    background: #101418; color: #eef2f5;
+    font-family: Roboto, "Noto Sans", system-ui, sans-serif;
+    overflow: hidden; -webkit-tap-highlight-color: transparent;
+    user-select: none;
+  }
+  #app { display: flex; height: 100vh; padding: 2.5vh 2vw; gap: 2vw; }
+  #left { flex: 0 0 44%; display: flex; flex-direction: column; min-width: 0; }
+  #right { flex: 1; min-width: 0; border-radius: 18px; overflow: hidden; background: #fff; position: relative; }
+  #right iframe { width: 100%; height: 100%; border: 0; display: block; }
+  #cal-empty {
+    position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+    background: #1a2027; color: #8b97a3; font-size: 2.6vh; text-align: center; padding: 4vw;
+  }
+
+  #clock { font-size: 19vh; font-weight: 300; line-height: 1; letter-spacing: -0.02em; }
+  #date { font-size: 3.6vh; color: #a9b4bf; margin-top: 1vh; text-transform: capitalize; }
+
+  #weather { margin-top: 4vh; flex: 1; min-height: 0; }
+  #now { display: flex; align-items: center; gap: 1.5vw; }
+  #now-icon { font-size: 11vh; line-height: 1; }
+  #now-temp { font-size: 11vh; font-weight: 300; line-height: 1; }
+  #now-text { font-size: 2.8vh; color: #a9b4bf; margin-top: 1.2vh; }
+  #city { font-size: 2.4vh; color: #6f7b87; margin-top: 0.4vh; }
+  #days { display: flex; gap: 0.8vw; margin-top: 3vh; }
+  .day {
+    flex: 1; background: #1a2027; border-radius: 14px; padding: 1.6vh 0.4vw; text-align: center;
+  }
+  .day .n { font-size: 2.2vh; color: #a9b4bf; text-transform: capitalize; }
+  .day .i { font-size: 4.6vh; margin: 0.6vh 0; line-height: 1.1; }
+  .day .t { font-size: 2.4vh; }
+  .day .t span { color: #6f7b87; }
+  .day .p { font-size: 1.9vh; color: #6fb3e8; margin-top: 0.3vh; min-height: 2.3vh; }
+
+  #buttons { display: flex; gap: 1vw; margin-top: 2vh; }
+  .btn {
+    flex: 1; display: flex; align-items: center; justify-content: center; gap: 0.8vw;
+    height: 11vh; border-radius: 16px; font-size: 3.2vh; font-weight: 500;
+    color: #fff; text-decoration: none; border: 0; font-family: inherit;
+  }
+  .btn:active { opacity: 0.7; }
+  #b-spotify { background: #1a8f47; }
+  #b-youtube { background: #c62828; }
+  #b-settings { flex: 0 0 11vh; background: #1a2027; color: #a9b4bf; font-size: 4.5vh; }
+
+  #overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.7); display: none;
+    align-items: center; justify-content: center; z-index: 10;
+  }
+  #overlay.open { display: flex; }
+  #panel {
+    background: #1a2027; border-radius: 18px; padding: 3.5vh 2.5vw; width: 62vw; max-height: 92vh;
+    overflow-y: auto; user-select: text;
+  }
+  #panel h2 { font-size: 3.4vh; font-weight: 500; margin-bottom: 2vh; }
+  #panel label { display: block; font-size: 2.3vh; color: #a9b4bf; margin: 2vh 0 0.8vh; }
+  #panel input, #panel select {
+    width: 100%; font-size: 2.8vh; padding: 1.4vh 1vw; border-radius: 10px;
+    border: 1px solid #36414c; background: #101418; color: #eef2f5; font-family: inherit;
+  }
+  #panel .row { display: flex; gap: 1vw; }
+  #panel .row input { flex: 1; }
+  #panel button {
+    font-size: 2.6vh; padding: 1.4vh 2vw; border-radius: 10px; border: 0;
+    background: #2f6fb0; color: #fff; font-family: inherit;
+  }
+  #panel button.ghost { background: #36414c; }
+  #results button {
+    display: block; width: 100%; text-align: left; margin-top: 0.8vh; background: #101418;
+    border: 1px solid #36414c;
+  }
+  #chosen { font-size: 2.3vh; color: #7fd18c; margin-top: 1vh; min-height: 2.8vh; }
+  #panel .hint { font-size: 2vh; color: #6f7b87; margin-top: 0.8vh; line-height: 1.4; }
+  #panel .actions { display: flex; justify-content: flex-end; gap: 1vw; margin-top: 3vh; }
+
+  @media (orientation: portrait) {
+    #app { flex-direction: column; }
+    #left { flex: 0 0 auto; }
+    #clock { font-size: 12vh; }
+    #weather { flex: 0 0 auto; }
+  }
+</style>
+</head>
+<body>
+
+<div id="app">
+  <div id="left">
+    <div id="clock">--:--</div>
+    <div id="date"></div>
+
+    <div id="weather">
+      <div id="now">
+        <div id="now-icon"></div>
+        <div id="now-temp"></div>
+      </div>
+      <div id="now-text">Meteo non configurato</div>
+      <div id="city"></div>
+      <div id="days"></div>
+    </div>
+
+    <div id="buttons">
+      <a class="btn" id="b-spotify"
+         href="intent://open.spotify.com/#Intent;scheme=https;package=com.spotify.music;S.browser_fallback_url=https%3A%2F%2Fopen.spotify.com%2F;end">♫ Spotify</a>
+      <a class="btn" id="b-youtube"
+         href="intent://www.youtube.com/#Intent;scheme=https;package=com.google.android.youtube;S.browser_fallback_url=https%3A%2F%2Fwww.youtube.com%2F;end">▶ YouTube</a>
+      <button class="btn" id="b-settings" aria-label="Impostazioni">⚙</button>
+    </div>
+  </div>
+
+  <div id="right">
+    <div id="cal-empty">Calendario non configurato.<br>Tocca ⚙ per impostarlo.</div>
+  </div>
+</div>
+
+<div id="overlay">
+  <div id="panel">
+    <h2>Impostazioni</h2>
+
+    <label for="q">Città per il meteo</label>
+    <div class="row">
+      <input id="q" type="text" placeholder="es. Bologna" autocomplete="off">
+      <button id="search">Cerca</button>
+    </div>
+    <div id="results"></div>
+    <div id="chosen"></div>
+
+    <label for="cal">Calendario Google (ID del calendario)</label>
+    <input id="cal" type="text" placeholder="es. nome@gmail.com" autocomplete="off" autocapitalize="off">
+    <div class="hint">Di solito è il tuo indirizzo Gmail. Per più calendari, separali con una virgola.
+      Chrome su questo tablet deve essere connesso allo stesso account Google.</div>
+
+    <label for="mode">Vista del calendario</label>
+    <select id="mode">
+      <option value="AGENDA">Agenda (elenco eventi)</option>
+      <option value="WEEK">Settimana</option>
+      <option value="MONTH">Mese</option>
+    </select>
+
+    <div class="actions">
+      <button class="ghost" id="cancel">Annulla</button>
+      <button id="save">Salva</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  var KEY = 'cucina-impostazioni';
+  var WEATHER_EVERY = 30 * 60 * 1000;   // meteo ogni 30 minuti
+  var CAL_EVERY = 15 * 60 * 1000;       // calendario ogni 15 minuti
+
+  var $ = function (id) { return document.getElementById(id); };
+
+  // ---------- impostazioni (salvate nel browser del tablet) ----------
+  var cfg = { city: null, lat: null, lon: null, cal: '', mode: 'AGENDA' };
+  try {
+    var saved = JSON.parse(localStorage.getItem(KEY) || 'null');
+    if (saved) { for (var k in saved) { cfg[k] = saved[k]; } }
+  } catch (e) { /* nessuna impostazione salvata */ }
+
+  function persist() {
+    try { localStorage.setItem(KEY, JSON.stringify(cfg)); } catch (e) { /* ignora */ }
+  }
+
+  // ---------- orologio ----------
+  var fmtDate = new Intl.DateTimeFormat('it-IT', { weekday: 'long', day: 'numeric', month: 'long' });
+  var fmtDay = new Intl.DateTimeFormat('it-IT', { weekday: 'short' });
+
+  function pad(n) { return n < 10 ? '0' + n : '' + n; }
+
+  function tick() {
+    var d = new Date();
+    $('clock').textContent = pad(d.getHours()) + ':' + pad(d.getMinutes());
+    $('date').textContent = fmtDate.format(d);
+  }
+  tick();
+  setInterval(tick, 5000);
+
+  // ---------- meteo (Open-Meteo, gratuito e senza registrazione) ----------
+  // Codici meteo WMO -> [icona, descrizione]
+  var WMO = {
+    0: ['☀️', 'Sereno'], 1: ['🌤️', 'Quasi sereno'], 2: ['⛅', 'Parzialmente nuvoloso'], 3: ['☁️', 'Coperto'],
+    45: ['🌫️', 'Nebbia'], 48: ['🌫️', 'Nebbia con brina'],
+    51: ['🌦️', 'Pioviggine debole'], 53: ['🌦️', 'Pioviggine'], 55: ['🌦️', 'Pioviggine intensa'],
+    56: ['🌧️', 'Pioviggine gelata'], 57: ['🌧️', 'Pioviggine gelata'],
+    61: ['🌧️', 'Pioggia debole'], 63: ['🌧️', 'Pioggia'], 65: ['🌧️', 'Pioggia forte'],
+    66: ['🌧️', 'Pioggia gelata'], 67: ['🌧️', 'Pioggia gelata'],
+    71: ['🌨️', 'Neve debole'], 73: ['🌨️', 'Neve'], 75: ['❄️', 'Neve forte'], 77: ['🌨️', 'Nevischio'],
+    80: ['🌦️', 'Rovesci deboli'], 81: ['🌧️', 'Rovesci'], 82: ['⛈️', 'Rovesci violenti'],
+    85: ['🌨️', 'Rovesci di neve'], 86: ['❄️', 'Rovesci di neve'],
+    95: ['⛈️', 'Temporale'], 96: ['⛈️', 'Temporale con grandine'], 99: ['⛈️', 'Temporale con grandine']
+  };
+  function wmo(code) { return WMO[code] || ['🌡️', '']; }
+
+  function el(tag, cls, text) {
+    var e = document.createElement(tag);
+    if (cls) { e.className = cls; }
+    if (text !== undefined) { e.textContent = text; }
+    return e;
+  }
+
+  function loadWeather() {
+    if (cfg.lat === null || cfg.lon === null) { return; }
+    var url = 'https://api.open-meteo.com/v1/forecast?latitude=' + cfg.lat + '&longitude=' + cfg.lon +
+      '&current=temperature_2m,apparent_temperature,weather_code' +
+      '&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max' +
+      '&timezone=auto&forecast_days=5';
+
+    fetch(url).then(function (r) {
+      if (!r.ok) { throw new Error('HTTP ' + r.status); }
+      return r.json();
+    }).then(function (w) {
+      var c = w.current, now = wmo(c.weather_code);
+      $('now-icon').textContent = now[0];
+      $('now-temp').textContent = Math.round(c.temperature_2m) + '°';
+      $('now-text').textContent = now[1] + ' · percepiti ' + Math.round(c.apparent_temperature) + '°';
+      $('city').textContent = cfg.city || '';
+
+      var box = $('days');
+      box.textContent = '';
+      var d = w.daily;
+      for (var i = 0; i < d.time.length; i++) {
+        var day = el('div', 'day');
+        var name = i === 0 ? 'oggi' : fmtDay.format(new Date(d.time[i] + 'T12:00:00'));
+        day.appendChild(el('div', 'n', name));
+        day.appendChild(el('div', 'i', wmo(d.weather_code[i])[0]));
+        var t = el('div', 't', Math.round(d.temperature_2m_max[i]) + '° ');
+        t.appendChild(el('span', '', Math.round(d.temperature_2m_min[i]) + '°'));
+        day.appendChild(t);
+        var rain = d.precipitation_probability_max ? d.precipitation_probability_max[i] : null;
+        day.appendChild(el('div', 'p', rain !== null && rain >= 20 ? '💧 ' + rain + '%' : ''));
+        box.appendChild(day);
+      }
+    }).catch(function () {
+      // In caso di errore di rete lascia i dati precedenti; riproverà al prossimo giro.
+      if (!$('now-temp').textContent) { $('now-text').textContent = 'Meteo non disponibile'; }
+    });
+  }
+
+  // ---------- calendario (riquadro incorporato di Google Calendar) ----------
+  function calendarUrl() {
+    var ids = (cfg.cal || '').split(',').map(function (s) { return s.trim(); }).filter(Boolean);
+    if (!ids.length) { return null; }
+    var tz = 'Europe/Rome';
+    try { tz = Intl.DateTimeFormat().resolvedOptions().timeZone || tz; } catch (e) { /* ignora */ }
+    var p = ids.map(function (id) { return 'src=' + encodeURIComponent(id); });
+    p.push('ctz=' + encodeURIComponent(tz), 'mode=' + cfg.mode, 'hl=it', 'wkst=2',
+      'showTitle=0', 'showPrint=0', 'showTabs=0', 'showCalendars=0', 'showTz=0');
+    return 'https://calendar.google.com/calendar/embed?' + p.join('&');
+  }
+
+  function loadCalendar() {
+    var url = calendarUrl();
+    var old = document.querySelector('#right iframe');
+    if (!url) {
+      if (old) { old.remove(); }
+      $('cal-empty').style.display = 'flex';
+      return;
+    }
+    $('cal-empty').style.display = 'none';
+    var f = document.createElement('iframe');
+    f.src = url;
+    f.title = 'Calendario';
+    if (old) { old.replaceWith(f); } else { $('right').appendChild(f); }
+  }
+
+  // ---------- pannello impostazioni ----------
+  var draft = null;
+
+  function openSettings() {
+    draft = { city: cfg.city, lat: cfg.lat, lon: cfg.lon };
+    $('q').value = '';
+    $('results').textContent = '';
+    $('chosen').textContent = cfg.city ? 'Città attuale: ' + cfg.city : '';
+    $('cal').value = cfg.cal || '';
+    $('mode').value = cfg.mode;
+    $('overlay').classList.add('open');
+  }
+  function closeSettings() { $('overlay').classList.remove('open'); }
+
+  function searchCity() {
+    var q = $('q').value.trim();
+    var box = $('results');
+    box.textContent = '';
+    if (q.length < 2) { return; }
+    fetch('https://geocoding-api.open-meteo.com/v1/search?count=5&language=it&format=json&name=' +
+      encodeURIComponent(q)).then(function (r) { return r.json(); }).then(function (res) {
+      var list = res.results || [];
+      if (!list.length) { box.appendChild(el('div', 'hint', 'Nessuna città trovata.')); return; }
+      list.forEach(function (c) {
+        var label = [c.name, c.admin1, c.country].filter(Boolean).join(', ');
+        var b = el('button', '', label);
+        b.addEventListener('click', function () {
+          draft = { city: c.name, lat: c.latitude, lon: c.longitude };
+          box.textContent = '';
+          $('chosen').textContent = 'Città scelta: ' + label;
+        });
+        box.appendChild(b);
+      });
+    }).catch(function () {
+      box.appendChild(el('div', 'hint', 'Ricerca non riuscita: controlla la connessione.'));
+    });
+  }
+
+  function saveSettings() {
+    cfg.city = draft.city; cfg.lat = draft.lat; cfg.lon = draft.lon;
+    cfg.cal = $('cal').value.trim();
+    cfg.mode = $('mode').value;
+    persist();
+    closeSettings();
+    loadWeather();
+    loadCalendar();
+  }
+
+  $('b-settings').addEventListener('click', openSettings);
+  $('cancel').addEventListener('click', closeSettings);
+  $('save').addEventListener('click', saveSettings);
+  $('search').addEventListener('click', searchCity);
+  $('q').addEventListener('keydown', function (e) { if (e.key === 'Enter') { searchCity(); } });
+
+  // ---------- schermo sempre acceso (funziona solo su HTTPS) ----------
+  function keepAwake() {
+    if (!('wakeLock' in navigator)) { return; }
+    navigator.wakeLock.request('screen').catch(function () { /* non concesso */ });
+  }
+  document.addEventListener('visibilitychange', function () {
+    if (document.visibilityState === 'visible') { keepAwake(); tick(); loadWeather(); }
+  });
+  keepAwake();
+
+  // ---------- avvio ----------
+  loadWeather();
+  loadCalendar();
+  setInterval(loadWeather, WEATHER_EVERY);
+  setInterval(loadCalendar, CAL_EVERY);
+  if (cfg.lat === null && !cfg.cal) { openSettings(); }
+})();
+</script>
+</body>
+</html>
