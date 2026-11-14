@@ -75,8 +75,12 @@
   body.has-recipe #alm-season { display: none; }
 
   /* ----- colonna sinistra ----- */
-  #clock { font-size: 17vh; font-weight: 300; line-height: 1; letter-spacing: -0.02em; }
+  #clock { font-size: 19vh; font-weight: 300; line-height: 1; letter-spacing: -0.02em; }
   #date { font-size: 3.6vh; color: #a9b4bf; margin-top: 1vh; text-transform: capitalize; }
+  /* La data sotto l'orologio serve solo quando a destra c'è l'agenda: l'almanacco la mostra già. */
+  #date { display: none; }
+  body.view-agenda #date { display: block; }
+  body.view-agenda #clock { font-size: 17vh; }
 
   #weather { margin-top: 3vh; flex: 1; min-height: 0; }
   #now { display: flex; align-items: center; gap: 1.5vw; }
@@ -96,15 +100,26 @@
 
   #buttons { display: flex; gap: 1vw; margin-top: 2vh; }
   .btn {
-    flex: 1; display: flex; align-items: center; justify-content: center; gap: 0.8vw;
-    height: 11vh; border-radius: 16px; font-size: 3.2vh; font-weight: 500;
-    color: #fff; text-decoration: none; border: 0; font-family: inherit;
+    flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 0.7vh; height: 13.5vh; border-radius: 18px; border: 0; font-family: inherit;
+    font-size: 2.3vh; font-weight: 500; letter-spacing: 0.03em; color: #fff; text-decoration: none;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.22), inset 0 -3px 0 rgba(0,0,0,0.18), 0 4px 10px rgba(0,0,0,0.35);
   }
-  .btn:active { opacity: 0.7; }
-  #b-radio { background: #14808a; }
-  #b-youtube { background: #c62828; }
-  .btn.sq { flex: 0 0 11vh; background: #1a2027; color: #a9b4bf; font-size: 4.5vh; }
-  #b-view { flex: 0 0 auto; padding: 0 1.4vw; font-size: 2.6vh; background: #2f6fb0; color: #fff; }
+  .btn:active { transform: scale(0.96); opacity: 0.85; }
+  .btn svg {
+    width: 6vh; height: 6vh; fill: none; stroke: #fff; stroke-width: 1.7;
+    stroke-linecap: round; stroke-linejoin: round;
+  }
+  .btn svg .f { fill: #fff; stroke: none; }
+  #b-radio { background: linear-gradient(160deg, #22a8ad, #0e6471); }
+  #b-youtube { background: linear-gradient(160deg, #ea5055, #a11a22); }
+  #b-view { background: linear-gradient(160deg, #4f95dc, #23568f); }
+  #b-settings { flex: 0 0 13.5vh; background: #1a2027; color: #a9b4bf; box-shadow: inset 0 1px 0 rgba(255,255,255,0.06); }
+  #b-settings svg { stroke: #a9b4bf; width: 5vh; height: 5vh; }
+  #b-settings svg .f { fill: #1a2027; stroke: #a9b4bf; }
+  #b-view .ic-alm { display: none; }
+  body.view-agenda #b-view .ic-alm { display: block; }
+  body.view-agenda #b-view .ic-cal { display: none; }
 
   /* ----- impostazioni ----- */
   #overlay {
@@ -165,11 +180,36 @@
 
     <div id="buttons">
       <a class="btn" id="b-radio"
-         href="intent://tunein.com/#Intent;scheme=https;package=tunein.player;S.browser_fallback_url=https%3A%2F%2Ftunein.com%2F;end">📻 TuneIn</a>
+         href="intent://tunein.com/#Intent;scheme=https;package=tunein.player;S.browser_fallback_url=https%3A%2F%2Ftunein.com%2F;end">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M7 8 17 3"/><rect x="3" y="8" width="18" height="12.5" rx="2.6"/>
+          <circle cx="8.6" cy="14.2" r="3"/><path d="M14.5 12h3.5M14.5 16.4h3.5"/>
+        </svg>
+        <span>TuneIn Radio</span>
+      </a>
       <a class="btn" id="b-youtube"
-         href="intent://www.youtube.com/#Intent;scheme=https;package=org.mozilla.firefox;S.browser_fallback_url=https%3A%2F%2Fwww.youtube.com%2F;end">▶ YouTube</a>
-      <button class="btn" id="b-view">Agenda</button>
-      <button class="btn sq" id="b-settings" aria-label="Impostazioni">⚙</button>
+         href="intent://www.youtube.com/#Intent;scheme=https;package=org.mozilla.firefox;S.browser_fallback_url=https%3A%2F%2Fwww.youtube.com%2F;end">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <circle cx="12" cy="12" r="9.2"/><path class="f" d="M10 7.9v8.2l6.4-4.1z"/>
+        </svg>
+        <span>YouTube</span>
+      </a>
+      <button class="btn" id="b-view">
+        <svg class="ic-cal" viewBox="0 0 24 24" aria-hidden="true">
+          <rect x="3.5" y="5" width="17" height="15.5" rx="2.6"/><path d="M3.5 10h17M8 3v4M16 3v4"/>
+          <path class="f" d="M7 12.6h2.4V15H7zM10.8 12.6h2.4V15h-2.4zM14.6 12.6H17V15h-2.4zM7 16.2h2.4v2.4H7zM10.8 16.2h2.4v2.4h-2.4z"/>
+        </svg>
+        <svg class="ic-alm" viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M12 6.2C9.8 4.7 7 4.3 3.8 4.8v13.4c3.2-.5 6-.1 8.2 1.4 2.2-1.5 5-1.9 8.2-1.4V4.8C17 4.3 14.2 4.7 12 6.2zM12 6.2v13.4"/>
+        </svg>
+        <span id="b-view-label">Agenda</span>
+      </button>
+      <button class="btn" id="b-settings" aria-label="Impostazioni">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M4 7h16M4 12h16M4 17h16"/>
+          <circle class="f" cx="9" cy="7" r="2.1"/><circle class="f" cx="15.5" cy="12" r="2.1"/><circle class="f" cx="8" cy="17" r="2.1"/>
+        </svg>
+      </button>
     </div>
   </div>
 
@@ -238,7 +278,7 @@
 
     <!-- Agenda di Google Calendar -->
     <div id="agenda">
-      <div id="cal-empty">Calendario non configurato.<br>Tocca ⚙ per impostarlo.</div>
+      <div id="cal-empty">Calendario non configurato.<br>Aprilo dal pulsante delle impostazioni.</div>
     </div>
   </div>
 </div>
@@ -608,7 +648,7 @@
       $('sun-info').textContent = 'Alba e tramonto · ' + Math.floor(mins / 60) + ' h ' + (mins % 60) + ' min di luce';
     } else {
       $('sun-main').textContent = 'Alba e tramonto';
-      $('sun-info').textContent = cfg.lat === null ? 'Imposta la città con ⚙' : 'In attesa dei dati…';
+      $('sun-info').textContent = cfg.lat === null ? 'Imposta la città nelle impostazioni' : 'In attesa dei dati…';
     }
 
     var list = PROVERBS[d.getMonth()];
@@ -790,7 +830,7 @@
   function applyView() {
     var agenda = cfg.view === 'agenda';
     document.body.classList.toggle('view-agenda', agenda);
-    $('b-view').textContent = agenda ? 'Almanacco' : 'Agenda';
+    $('b-view-label').textContent = agenda ? 'Almanacco' : 'Agenda';
     loadCalendar();
   }
 
