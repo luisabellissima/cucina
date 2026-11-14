@@ -114,6 +114,9 @@
   #b-radio { background: linear-gradient(160deg, #22a8ad, #0e6471); }
   #b-youtube { background: linear-gradient(160deg, #ea5055, #a11a22); }
   #b-view { background: linear-gradient(160deg, #4f95dc, #23568f); }
+  #b-timer { background: linear-gradient(160deg, #f0a63a, #b96a12); }
+  #b-timer.on { background: linear-gradient(160deg, #f7c04a, #d9820f); }
+  #b-timer.on span { font-size: 3.1vh; font-weight: 700; font-variant-numeric: tabular-nums; }
   /* Impostazioni: pulsante piccolo e discreto accanto all'orologio */
   #clock-row { display: flex; align-items: flex-start; justify-content: space-between; }
   #b-settings {
@@ -159,6 +162,44 @@
   #chosen { font-size: 2.3vh; color: #7fd18c; margin-top: 1vh; min-height: 2.8vh; }
   #panel .hint { font-size: 2vh; color: #6f7b87; margin-top: 0.8vh; line-height: 1.4; }
   #panel .actions { display: flex; justify-content: flex-end; gap: 1vw; margin-top: 3vh; }
+
+  /* ----- timer ----- */
+  #t-ov {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.7); display: none;
+    align-items: center; justify-content: center; z-index: 10;
+  }
+  #t-ov.open { display: flex; }
+  #t-panel { background: #1a2027; border-radius: 18px; padding: 3vh 3vw; text-align: center; }
+  #t-panel h2 { font-size: 3vh; font-weight: 500; color: #a9b4bf; }
+  #t-wheels { display: flex; align-items: center; justify-content: center; margin-top: 1vh; }
+  .wheel { touch-action: none; padding: 0 2vw; cursor: ns-resize; }
+  .wheel .num { font-size: 24vh; font-weight: 300; line-height: 1; font-variant-numeric: tabular-nums; min-width: 30vh; }
+  .wheel .arr { font-size: 3.4vh; color: #56636f; line-height: 1.6; }
+  .wheel .lab { font-size: 2.3vh; color: #6f7b87; letter-spacing: 0.12em; text-transform: uppercase; }
+  .wheel.drag .num { color: #f7c04a; }
+  #t-colon { font-size: 20vh; font-weight: 300; line-height: 1; padding-bottom: 6vh; color: #6f7b87; }
+  #t-ov.running .wheel { pointer-events: none; }
+  #t-ov.running .arr { visibility: hidden; }
+  #t-actions { display: flex; justify-content: center; gap: 1.5vw; margin-top: 3vh; }
+  #t-panel button {
+    font-size: 3vh; padding: 1.8vh 2.4vw; border-radius: 12px; border: 0;
+    background: #36414c; color: #fff; font-family: inherit;
+  }
+  #t-panel #t-start { background: #1f9d55; padding-left: 5vw; padding-right: 5vw; }
+  #t-panel #t-stop { background: #c0392b; }
+  #t-ov.running #t-start { display: none; }
+  #t-ov:not(.running) #t-stop { display: none; }
+
+  #t-ring {
+    position: fixed; inset: 0; z-index: 20; display: none; flex-direction: column;
+    align-items: center; justify-content: center; text-align: center; color: #fff;
+    background: #c0392b; animation: ring 1s steps(2, start) infinite;
+  }
+  #t-ring.open { display: flex; }
+  #t-ring .ico { font-size: 22vh; line-height: 1.1; }
+  #t-ring .big { font-size: 10vh; font-weight: 700; }
+  #t-ring .sm { font-size: 3.6vh; margin-top: 2vh; opacity: 0.9; }
+  @keyframes ring { 0% { background: #c0392b; } 50% { background: #7d1f16; } }
 
   @media (orientation: portrait) {
     #app { flex-direction: column; }
@@ -219,6 +260,12 @@
           <path d="M12 6.2C9.8 4.7 7 4.3 3.8 4.8v13.4c3.2-.5 6-.1 8.2 1.4 2.2-1.5 5-1.9 8.2-1.4V4.8C17 4.3 14.2 4.7 12 6.2zM12 6.2v13.4"/>
         </svg>
         <span id="b-view-label">Agenda</span>
+      </button>
+      <button class="btn" id="b-timer">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <circle cx="12" cy="13.6" r="7.4"/><path d="M9.6 3h4.8M12 3v3.2M18 7.6l1.3-1.3M12 13.6V9.6M12 13.6l2.6 1.6"/>
+        </svg>
+        <span id="b-timer-label">Timer</span>
       </button>
     </div>
   </div>
@@ -322,6 +369,34 @@
       <button id="save">Salva</button>
     </div>
   </div>
+</div>
+
+<div id="t-ov">
+  <div id="t-panel">
+    <h2>Timer</h2>
+    <div id="t-wheels">
+      <div class="wheel" id="w-min">
+        <div class="arr">▲</div><div class="num" id="t-min">10</div><div class="arr">▼</div>
+        <div class="lab">minuti</div>
+      </div>
+      <div id="t-colon">:</div>
+      <div class="wheel" id="w-sec">
+        <div class="arr">▲</div><div class="num" id="t-sec">00</div><div class="arr">▼</div>
+        <div class="lab">secondi</div>
+      </div>
+    </div>
+    <div id="t-actions">
+      <button id="t-close">Chiudi</button>
+      <button id="t-stop">Ferma il timer</button>
+      <button id="t-start">Avvia</button>
+    </div>
+  </div>
+</div>
+
+<div id="t-ring">
+  <div class="ico">⏰</div>
+  <div class="big">Tempo scaduto!</div>
+  <div class="sm">Tocca lo schermo per fermare</div>
 </div>
 
 <script>
@@ -946,6 +1021,130 @@
   $('save').addEventListener('click', saveSettings);
   $('search').addEventListener('click', searchCity);
   $('q').addEventListener('keydown', function (e) { if (e.key === 'Enter') { searchCity(); } });
+
+  // ---------- timer da cucina ----------
+  var TKEY = 'cucina-timer';
+  var RING_MAX = 2 * 60 * 1000;                      // la suoneria si ferma da sola dopo 2 minuti
+  var timer = { end: null, sec: 600 };               // end = istante di fine (ms), sec = durata scelta in secondi
+  var actx = null, ringId = null, ringOff = null;
+
+  try {
+    var ts = JSON.parse(localStorage.getItem(TKEY) || 'null');
+    if (ts) { timer.end = typeof ts.end === 'number' ? ts.end : null; timer.sec = ts.sec || (ts.set || 10) * 60; }
+  } catch (e) { /* nessun timer salvato */ }
+
+  function saveTimer() {
+    try { localStorage.setItem(TKEY, JSON.stringify(timer)); } catch (e) { /* ignora */ }
+  }
+
+  function clock(ms) {
+    var s = Math.max(0, Math.ceil(ms / 1000));
+    var hrs = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), sec = s % 60;
+    return hrs ? hrs + ':' + pad(m) + ':' + pad(sec) : m + ':' + pad(sec);
+  }
+
+  // L'audio si può attivare solo in risposta a un tocco: lo si prepara quando si avvia il timer.
+  function ensureAudio() {
+    try {
+      actx = actx || new (window.AudioContext || window.webkitAudioContext)();
+      if (actx.state === 'suspended') { actx.resume(); }
+    } catch (e) { actx = null; }
+  }
+
+  function beep() {
+    if (!actx) { return; }
+    for (var i = 0; i < 3; i++) {
+      var o = actx.createOscillator(), g = actx.createGain(), t = actx.currentTime + i * 0.22;
+      o.type = 'square'; o.frequency.value = 880;
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.exponentialRampToValueAtTime(0.6, t + 0.02);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + 0.16);
+      o.connect(g); g.connect(actx.destination);
+      o.start(t); o.stop(t + 0.18);
+    }
+  }
+
+  function stopRing() {
+    $('t-ring').classList.remove('open');
+    clearInterval(ringId); clearTimeout(ringOff);
+    ringId = ringOff = null;
+  }
+
+  function ring() {
+    $('t-ov').classList.remove('open');
+    $('t-ring').classList.add('open');
+    beep();
+    ringId = setInterval(beep, 1200);
+    ringOff = setTimeout(stopRing, RING_MAX);
+  }
+
+  function renderTimer() {
+    var running = timer.end !== null;
+    var s = running ? Math.max(0, Math.ceil((timer.end - Date.now()) / 1000)) : timer.sec;
+    $('t-min').textContent = pad(Math.floor(s / 60));
+    $('t-sec').textContent = pad(s % 60);
+    $('t-ov').classList.toggle('running', running);
+    $('b-timer').classList.toggle('on', running);
+    $('b-timer-label').textContent = running ? clock(s * 1000) : 'Timer';
+  }
+
+  function tickTimer() {
+    if (timer.end === null) { return; }
+    if (Date.now() >= timer.end) {
+      var late = Date.now() - timer.end;
+      timer.end = null;
+      saveTimer();
+      if (late < RING_MAX) { ring(); }   // se è scaduto da troppo (tablet spento), non suona
+    }
+    renderTimer();
+  }
+
+  // Rotelle: si scorre col dito in su per aumentare e in giù per diminuire.
+  // "px" è la distanza di scorrimento che vale una unità.
+  function wheel(id, px, change) {
+    var w = $(id), lastY = null, rest = 0;
+    w.addEventListener('pointerdown', function (e) {
+      if (timer.end !== null) { return; }
+      lastY = e.clientY; rest = 0;
+      w.classList.add('drag');
+      try { w.setPointerCapture(e.pointerId); } catch (err) { /* ignora */ }
+    });
+    w.addEventListener('pointermove', function (e) {
+      if (lastY === null) { return; }
+      rest += lastY - e.clientY;        // positivo = verso l'alto
+      lastY = e.clientY;
+      var steps = rest > 0 ? Math.floor(rest / px) : Math.ceil(rest / px);
+      if (steps) { rest -= steps * px; change(steps); saveTimer(); renderTimer(); }
+    });
+    function end() { lastY = null; w.classList.remove('drag'); }
+    w.addEventListener('pointerup', end);
+    w.addEventListener('pointercancel', end);
+  }
+  wheel('w-min', 26, function (n) {      // minuti: da 0 a 99
+    var m = Math.min(99, Math.max(0, Math.floor(timer.sec / 60) + n));
+    timer.sec = m * 60 + timer.sec % 60;
+  });
+  wheel('w-sec', 14, function (n) {      // secondi: da 0 a 59, girano in tondo
+    var s = (((timer.sec % 60) + n) % 60 + 60) % 60;
+    timer.sec = Math.floor(timer.sec / 60) * 60 + s;
+  });
+
+  $('b-timer').addEventListener('click', function () { renderTimer(); $('t-ov').classList.add('open'); });
+  $('t-close').addEventListener('click', function () { $('t-ov').classList.remove('open'); });
+  $('t-start').addEventListener('click', function () {
+    if (timer.sec < 1) { return; }
+    ensureAudio();
+    timer.end = Date.now() + timer.sec * 1000;
+    saveTimer(); renderTimer();
+    $('t-ov').classList.remove('open');
+  });
+  $('t-stop').addEventListener('click', function () { timer.end = null; saveTimer(); renderTimer(); });
+  $('t-ring').addEventListener('click', stopRing);
+
+  // Dopo un ricaricamento con il timer in corso, l'audio va riattivato al primo tocco.
+  if (timer.end !== null) { document.addEventListener('pointerdown', ensureAudio, { once: true }); }
+  renderTimer();
+  setInterval(tickTimer, 500);
 
   // ---------- schermo sempre acceso (funziona solo su HTTPS) ----------
   function keepAwake() {
